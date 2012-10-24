@@ -1,7 +1,11 @@
 #include "callbacks.hh"
 
 #include "server.hh"
-#include "poolUser.hh"
+#include "poolClient.hh"
+#include "sha1.hh"
+
+using std::string;
+
 
 void ErrorCB( struct bufferevent*, short, void* );
 void ReadCB( struct bufferevent*, void* );
@@ -33,9 +37,12 @@ void HandleNewConnection( evutil_socket_t listener, short event, void *arg )
     struct bufferevent *bev;
     evutil_make_socket_nonblocking( fd );
     bev = bufferevent_socket_new( base, fd, BEV_OPT_CLOSE_ON_FREE );
-    bufferevent_setcb( bev, ReadCB, NULL, ErrorCB, NULL );
-    bufferevent_setwatermark( bev, EV_READ, 0, 16000 );
-    bufferevent_enable( bev, EV_READ|EV_WRITE );
+
+    PoolClient *client = new PoolClient( server, bev );
+
+    bufferevent_setcb( bev, ReadCB, NULL, ErrorCB, (void*)client );
+
+    server->AddClient( client );
   }
 }
 
@@ -43,6 +50,9 @@ void HandleNewConnection( evutil_socket_t listener, short event, void *arg )
 
 void ErrorCB( struct bufferevent *bev, short error, void *ctx )
 {
+  PoolClient *client = (PoolClient*)ctx;
+  std::cout << "Error by '" << client->id << "'\n";
+  client->state = ERROR;
   if( error & BEV_EVENT_EOF )
   {
     /* connection has been closed, do any clean up here */
@@ -62,32 +72,42 @@ void ErrorCB( struct bufferevent *bev, short error, void *ctx )
 
 void ReadCB( struct bufferevent *bev, void *ctx )
 {
-  struct evbuffer *input, *output;
+  PoolClient *client = (PoolClient*)ctx;
+  std::cout << "Received data from '" << client->id << "'\n";
+
   char *line;
   size_t n;
   int i;
 
-  input  = bufferevent_get_input( bev );
-  output = bufferevent_get_output( bev );
+  unsigned char hash[20];
+  char hex[41];
+  int len;
 
-  while( (line = evbuffer_readln( input, &n, EVBUFFER_EOL_LF )) )
+  while( (line = evbuffer_readln( client->input, &n, EVBUFFER_EOL_LF )) )
   {
-    evbuffer_add( output, line, n );
-    evbuffer_add( output, "\n", 1 );
+    len = strlen( line )-1;
+    sha1::calc( line, len, hash );
+    sha1::toHexString( hash, hex );
+    evbuffer_add( client->output, "\n", 1 );
+    evbuffer_add( client->output, hex, 40 );
+    evbuffer_add( client->output, "\n", 1 );
+
+    client->HandleMessage( string( line ) );
+
     free( line );
   }
 
-  if( evbuffer_get_length( input ) >= 16000 )
+  if( evbuffer_get_length( client->input ) >= 16000 )
   {
     /* Too long; just process what there is and go on so that the buffer
      * doesn't grow infinitely long. */
     char buf[1024];
-    while( evbuffer_get_length( input ) )
+    while( evbuffer_get_length( client->input ) )
     {
-      int n = evbuffer_remove( input, buf, sizeof(buf) );
-      evbuffer_add(output, buf, n);
+      int n = evbuffer_remove( client->input, buf, sizeof(buf) );
+      evbuffer_add( client->output, buf, n );
     }
-    evbuffer_add(output, "\n", 1);
+    evbuffer_add( client->output, "\n", 1 );
   }
 }
 

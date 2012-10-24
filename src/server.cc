@@ -14,6 +14,7 @@
 #include <errno.h>
 
 using std::vector;
+using std::string;
 
 
 void Server::Run()
@@ -61,5 +62,66 @@ void Server::Run()
   event_add( listener_event, NULL );
 
   event_base_dispatch( base );
+}
+
+
+
+bool Server::AddClient( Client *client )
+{
+  clientList.push_back( client );
+  return true;
+}
+
+
+
+bool Server::AddPool( Pool *pool )
+{
+  poolList.push_back( pool );
+  return true;
+}
+
+
+
+bool Server::MoveClientToPool( Client *client, Pool *pool )
+{
+  vector<Client*>::iterator cit;
+
+  bool found = false;
+
+  for( cit = clientList.begin(); cit != clientList.end(); ++cit )
+  {
+    if( (*cit) == client )
+    {
+      clientList.erase( cit );
+      found = true;
+      break;
+    }
+  }
+
+  if( !found )
+    return false;
+
+  pool->AddClient( client );
+  std::cout << "Moved client '" << client->id << "' to pool '" << pool->id << "'.\n";
+}
+
+
+
+Pool* Server::FindPool( string id )
+{
+  Pool *ret = NULL;
+
+  vector<Pool*>::iterator pit;
+  for( pit = poolList.begin(); pit != poolList.end(); ++pit )
+  {
+    std::cout << "Comparing:\n-" << id << " and\n-" << (*pit)->idHash << "\n";
+    if( (*pit)->idHash.compare( id ) == 0 )
+    {
+      ret = *pit;
+      break;
+    }
+  }
+
+  return ret;
 }
 
