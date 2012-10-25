@@ -2,6 +2,7 @@
 #include "pool.hh"
 
 #include <ctime>
+#include <cstdlib>
 
 
 int main( int c, char *v[] )

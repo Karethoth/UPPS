@@ -1,6 +1,7 @@
 #include "pool.hh"
 #include <ctime>
 #include <cstdlib>
+#include <sstream>
 
 #include "sha1.hh"
 
@@ -26,14 +27,15 @@ Pool::Pool()
 
 void Pool::CreateSalt()
 {
-  char tmpBuf[256];
-  sprintf( tmpBuf, "%d%d-%d\0", rand(), time( NULL ), rand() );
-  string salt( tmpBuf );
+  std::ostringstream saltStream;
+  saltStream << rand() << time( NULL ) << "-" << rand();
+
+  string rawSalt( saltStream.str() );
 
   unsigned char hash[20];
   char hex[41];
 
-  sha1::calc( salt.c_str(), salt.length(), hash );
+  sha1::calc( rawSalt.c_str(), rawSalt.length(), hash );
   sha1::toHexString( hash, hex );
 
   this->salt = string( hex );
@@ -43,9 +45,10 @@ void Pool::CreateSalt()
 
 void Pool::CreateIdentifier()
 {
-  char tmpBuf[100];
-  sprintf( tmpBuf, "%d-%d\0", time( NULL )/2, rand() );
-  string id( tmpBuf );
+  std::ostringstream idStream;
+  idStream << rand() << "-" << time( NULL )/2 << rand();
+
+  string id( idStream.str() );
 
   unsigned char hash[20];
   char hex[41];
@@ -66,9 +69,9 @@ void Pool::CreateIdentifier()
 
 void Pool::CreateOwnerKey()
 {
-  char tmpBuf[100];
-  sprintf( tmpBuf, "%d%d%d\0", rand(), time( NULL )/3, rand() );
-  string key( tmpBuf );
+  std::ostringstream keyStream;
+  keyStream << rand() << time( NULL )/3 << rand();
+  string key( keyStream.str() );
 
   unsigned char hash[20];
   char hex[41];

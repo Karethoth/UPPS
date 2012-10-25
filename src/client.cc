@@ -1,6 +1,8 @@
 #include "client.hh"
 
 #include "sha1.hh"
+#include <cstdlib>
+#include <sstream>
 
 using std::string;
 
@@ -19,14 +21,15 @@ Client::Client()
 
 void Client::CreateSalt()
 {
-  char tmpBuf[256];
-  sprintf( tmpBuf, "%d%d-%d\0", rand(), time( NULL ), rand() );
-  string salt( tmpBuf );
+  std::ostringstream saltStream;
+  saltStream << rand() << time( NULL ) << "-" << rand();
+
+  string rawSalt( saltStream.str() );
 
   unsigned char hash[20];
   char hex[41];
 
-  sha1::calc( salt.c_str(), salt.length(), hash );
+  sha1::calc( rawSalt.c_str(), rawSalt.length(), hash );
   sha1::toHexString( hash, hex );
 
   this->salt = string( hex );
@@ -36,9 +39,10 @@ void Client::CreateSalt()
 
 void Client::CreateIdentifier()
 {
-  char tmpBuf[100];
-  sprintf( tmpBuf, "%d-%d\0", time( NULL )/2, rand() );
-  string id( tmpBuf );
+  std::ostringstream idStream;
+  idStream << rand() << "-" << time( NULL )/2 << rand();
+
+  string id( idStream.str() );
 
   unsigned char hash[20];
   char hex[41];
@@ -54,3 +58,4 @@ void Client::CreateIdentifier()
 
   idHash = string( hex );
 }
+
