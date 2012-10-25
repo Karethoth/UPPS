@@ -27,6 +27,7 @@ class Pool
   Pool();
 
   bool AddClient( Client* );
+  std::vector<Client*>* GetClientList();
 };
 
 #endif

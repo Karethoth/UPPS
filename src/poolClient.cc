@@ -4,11 +4,14 @@
 #include <event2/buffer.h>
 
 using std::string;
+using std::vector;
 
 
 PoolClient::PoolClient( Server *srv, struct bufferevent *bev ) : Client()
 {
   server = srv;
+  pool   = NULL;
+
   input  =  bufferevent_get_input( bev );
   output =  bufferevent_get_output( bev );
 
@@ -21,6 +24,13 @@ PoolClient::PoolClient( Server *srv, struct bufferevent *bev ) : Client()
   ridMsg.append( "\n" );
 
   evbuffer_add( output, ridMsg.c_str(), ridMsg.length() );
+}
+
+
+
+void PoolClient::SetPool( Pool *p )
+{
+  pool = p;
 }
 
 
@@ -45,6 +55,16 @@ bool PoolClient::HandleMessage( string msg )
   {
     HandleREG( data );
   }
+  else if( state == NOT_AUTHENTICATED &&
+           cmd.compare( string( "NEWPOOL" ) ) == 0 )
+  {
+    HandleNEWPOOL();
+  }
+  else if( state == POOL_OWNER &&
+           cmd.compare( string( "LIST" ) ) == 0 )
+  {
+    HandleLIST();
+  }
 
   return true;
 }
@@ -61,6 +81,8 @@ bool PoolClient::HandleREG( string data )
     {
       state = AUTHENTICATED;
       server->MoveClientToPool( this, pool );
+      SetPool( pool );
+
       evbuffer_add( output, "REGRESP:POOLED\n", 15 );
       return true;
     }
@@ -71,9 +93,10 @@ bool PoolClient::HandleREG( string data )
     {
       if( pool->ownerHash.compare( data.substr(40,40) ) == 0 )
       {
-        state = POOLOWNER;
+        state = POOL_OWNER;
         server->MoveClientToPool( this, pool );
-        evbuffer_add( output, "REGRESP:POOLOWNER\n", 15 );
+        SetPool( pool );
+        evbuffer_add( output, "REGRESP:POOLOWNER\n", 18 );
         return true;
       }
     }
@@ -81,5 +104,47 @@ bool PoolClient::HandleREG( string data )
 
   evbuffer_add( output, "REGRESP:FAILED\n", 15 );
   return false;
+}
+
+
+
+bool PoolClient::HandleLIST()
+{
+  vector<Client*> *clients = pool->GetClientList();
+  string msg( "LISTRESP:" );
+
+  vector<Client*>::iterator cit;
+  for( cit = clients->begin(); cit != clients->end(); ++cit )
+  {
+    if( (*cit)->state == POOL_OWNER )
+      continue;
+    
+    msg.append( (*cit)->id );
+    msg.append( ";" );
+  }
+  msg.append( "\n" );
+
+  evbuffer_add( output, msg.c_str(), msg.length() );
+}
+
+
+
+bool PoolClient::HandleNEWPOOL()
+{
+  Pool *newPool = new Pool();
+  server->AddPool( newPool );
+
+  string msg( "POOLINFO:" );
+  msg.append( newPool->id );
+  msg.append( ";" );
+  msg.append( newPool->ownerKey );
+  msg.append( "\n" );
+
+  evbuffer_add( output, msg.c_str(), msg.length() );
+
+  string data( newPool->idHash );
+  data.append( newPool->ownerHash );
+
+  HandleREG( data );
 }
 

@@ -5,6 +5,7 @@
 #include "sha1.hh"
 
 using std::string;
+using std::vector;
 
 
 Pool::Pool()
@@ -90,5 +91,12 @@ bool Pool::AddClient( Client *client )
 {
   clientList.push_back( client );
   return true;
+}
+
+
+
+vector<Client*>* Pool::GetClientList()
+{
+  return &clientList;
 }
 
