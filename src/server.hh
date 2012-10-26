@@ -34,6 +34,7 @@ class Server
   bool MoveClientToPool( Client*, Pool* );
 
   Pool* FindPool( std::string );
+  Pool* FindSaltedPool( Client*, std::string );
 };
 
 #endif

@@ -19,8 +19,8 @@ PoolClient::PoolClient( Server *srv, struct bufferevent *bev ) : Client()
   bufferevent_enable( bev, EV_READ|EV_WRITE );
 
   
-  string ridMsg( "RID:" );
-  ridMsg.append( id );
+  string ridMsg( "RSALT:" );
+  ridMsg.append( salt );
   ridMsg.append( "\n" );
 
   evbuffer_add( output, ridMsg.c_str(), ridMsg.length() );
@@ -65,6 +65,10 @@ bool PoolClient::HandleMessage( string msg )
   {
     HandleLIST();
   }
+  else
+  {
+    evbuffer_add( output, "ERROR:NOT_A_COMMAND\n", 20 );
+  }
 
   return true;
 }
@@ -77,7 +81,7 @@ bool PoolClient::HandleREG( string data )
 
   if( data.length() == 40 )
   {
-    if( (pool = server->FindPool( data )) )
+    if( (pool = server->FindSaltedPool( this, data )) )
     {
       state = AUTHENTICATED;
       server->MoveClientToPool( this, pool );
@@ -89,7 +93,7 @@ bool PoolClient::HandleREG( string data )
   }
   else if( data.length() == 80 )
   {
-    if( (pool = server->FindPool( data.substr(0,40) )) )
+    if( (pool = server->FindSaltedPool( this, data.substr(0,40) )) )
     {
       if( pool->ownerHash.compare( data.substr(40,40) ) == 0 )
       {

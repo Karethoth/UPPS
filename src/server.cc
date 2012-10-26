@@ -1,5 +1,6 @@
 #include "server.hh"
 #include "callbacks.hh"
+#include "sha1.hh"
 
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -125,3 +126,32 @@ Pool* Server::FindPool( string id )
   return ret;
 }
 
+
+
+Pool* Server::FindSaltedPool( Client *client, string hash )
+{
+  Pool *ret = NULL;
+  unsigned char hashBuf[20];
+  char hex[41];
+
+  vector<Pool*>::iterator pit;
+  for( pit = poolList.begin(); pit != poolList.end(); ++pit )
+  {
+    string salted = (*pit)->id;
+    salted.append( client->salt );
+
+    sha1::calc( salted.c_str(), salted.length(), hashBuf );
+    sha1::toHexString( hashBuf, hex );
+
+    string hashed( hex );
+
+    std::cout << "Comparing:\n-" << hash << " and\n-" << hashed << "\n";
+    if( hashed.compare( hashed ) == 0 )
+    {
+      ret = *pit;
+      break;
+    }
+  }
+
+  return ret;
+}

@@ -85,12 +85,12 @@ void ReadCB( struct bufferevent *bev, void *ctx )
 
   while( (line = evbuffer_readln( client->input, &n, EVBUFFER_EOL_LF )) )
   {
-    len = strlen( line )-1;
-    sha1::calc( line, len, hash );
-    sha1::toHexString( hash, hex );
-    evbuffer_add( client->output, "\n", 1 );
-    evbuffer_add( client->output, hex, 40 );
-    evbuffer_add( client->output, "\n", 1 );
+    //len = strlen( line )-1;
+    //sha1::calc( line, len, hash );
+    //sha1::toHexString( hash, hex );
+    //evbuffer_add( client->output, "\n", 1 );
+    //evbuffer_add( client->output, hex, 40 );
+    //evbuffer_add( client->output, "\n", 1 );
 
     client->HandleMessage( string( line ) );
 
