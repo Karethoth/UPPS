@@ -23,6 +23,7 @@ class PoolClient : public Client
   void SetPool( Pool* );
 
   bool HandleMessage( std::string );
+  bool SendPackage( struct sPackage* );
 };
 
 #endif

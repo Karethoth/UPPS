@@ -3,6 +3,7 @@
 
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
+#include <sstream>
 
 using std::string;
 using std::vector;
@@ -75,6 +76,25 @@ bool PoolClient::HandleMessage( string msg )
 
 
 
+bool PoolClient::SendPackage( struct sPackage *pkg )
+{
+  std::ostringstream pkgStream;
+
+  pkgStream.write( (char*)&pkg->requestID, 4 );
+  pkgStream.write( (char*)&pkg->ip, 4 );
+  pkgStream.write( (char*)&pkg->port, 2 );
+  pkgStream.write( (char*)&pkg->dataLen, 2 );
+  pkgStream.write( (char*)&pkg->data, pkg->dataLen );
+  pkgStream.put( '\n' );
+
+  string pkgString( pkgStream.str() );
+
+  evbuffer_add( output, "PKG:\n", 5 );
+  evbuffer_add( output, pkgString.c_str(), pkgString.length() );
+}
+
+
+
 bool PoolClient::HandleREG( string data )
 {
   Pool *pool;
@@ -88,6 +108,17 @@ bool PoolClient::HandleREG( string data )
       SetPool( pool );
 
       evbuffer_add( output, "REGRESP:POOLED\n", 15 );
+
+      struct sPackage pkg;
+      pkg.requestID = 0x00000001;
+      pkg.ip        = 0x7F000001;
+      pkg.port      = 0x0050;
+      pkg.dataLen   = 0x0007;
+      string *m = new string( "AAAAAA" );
+      pkg.data = (unsigned char*)m->c_str();
+      SendPackage( &pkg );
+      delete m;
+
       return true;
     }
   }
