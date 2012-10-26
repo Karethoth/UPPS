@@ -1,4 +1,5 @@
 #include "poolClient.hh"
+#include "sha1.hh"
 
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
@@ -18,7 +19,6 @@ PoolClient::PoolClient( Server *srv, struct bufferevent *bev ) : Client()
   bufferevent_setwatermark( bev, EV_READ, 0, 16000 );
   bufferevent_enable( bev, EV_READ|EV_WRITE );
 
-  
   string ridMsg( "RSALT:" );
   ridMsg.append( salt );
   ridMsg.append( "\n" );
@@ -146,7 +146,16 @@ bool PoolClient::HandleNEWPOOL()
 
   evbuffer_add( output, msg.c_str(), msg.length() );
 
-  string data( newPool->idHash );
+  unsigned char poolHash[20];
+  char poolHex[41];
+
+  string saltedPool( newPool->id );
+  saltedPool.append( salt );
+
+  sha1::calc( saltedPool.c_str(), saltedPool.length(), poolHash );
+  sha1::toHexString( poolHash, poolHex );
+
+  string data( poolHex );
   data.append( newPool->ownerHash );
 
   HandleREG( data );
