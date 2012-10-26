@@ -146,7 +146,7 @@ Pool* Server::FindSaltedPool( Client *client, string hash )
     string hashed( hex );
 
     std::cout << "Comparing:\n-" << hash << " and\n-" << hashed << "\n";
-    if( hashed.compare( hashed ) == 0 )
+    if( hashed.compare( hash ) == 0 )
     {
       ret = *pit;
       break;
