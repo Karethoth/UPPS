@@ -15,7 +15,7 @@ struct sPackage
   unsigned int   ip;
   unsigned short port;
   unsigned short dataLen;
-  unsigned char *data;
+  std::vector<char> *data;
 };
 
 

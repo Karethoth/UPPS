@@ -84,7 +84,12 @@ bool PoolClient::SendPackage( struct sPackage *pkg )
   pkgStream.write( (char*)&pkg->ip, 4 );
   pkgStream.write( (char*)&pkg->port, 2 );
   pkgStream.write( (char*)&pkg->dataLen, 2 );
-  pkgStream.write( (char*)&pkg->data, pkg->dataLen );
+
+  vector<char>::iterator it;
+  for( it = pkg->data->begin(); it != pkg->data->end(); ++it )
+  {
+    pkgStream.put( *it );
+  }
   pkgStream.put( '\n' );
 
   string pkgString( pkgStream.str() );
@@ -109,15 +114,19 @@ bool PoolClient::HandleREG( string data )
 
       evbuffer_add( output, "REGRESP:POOLED\n", 15 );
 
+      vector<char> *data = new vector<char>();
+      data->push_back( 'A' );
+      data->push_back( 'A' );
+      data->push_back( 'A' );
+      data->push_back( 'A' );
+      data->push_back( '\0' );
       struct sPackage pkg;
       pkg.requestID = 0x00000001;
       pkg.ip        = 0x7F000001;
       pkg.port      = 0x0050;
-      pkg.dataLen   = 0x0007;
-      string *m = new string( "AAAAAA" );
-      pkg.data = (unsigned char*)m->c_str();
+      pkg.dataLen   = 0x0005;
+      pkg.data      = data;
       SendPackage( &pkg );
-      delete m;
 
       return true;
     }
